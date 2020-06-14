@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <limits>
+#include <string_view>
 
 namespace json11 {
 
@@ -36,6 +37,7 @@ using std::map;
 using std::make_shared;
 using std::initializer_list;
 using std::move;
+using std::string_view;
 
 /* Helper for representing null - just a do-nothing struct, plus comparison
  * operators so the helpers in JsonValue work. We can't use nullptr_t because
@@ -74,7 +76,7 @@ static void dump(bool value, string &out) {
     out += value ? "true" : "false";
 }
 
-static void dump(string const& value, string &out) {
+static void dump(string_view value, string &out) {
     out += '"';
     for (size_t i = 0; i < value.length(); i++) {
         char const ch = value[i];
@@ -195,7 +197,7 @@ public:
 };
 
 class JsonString final : public Value<Json::STRING, string> {
-    string const& string_value() const override { return m_value; }
+    string_view string_value() const override { return m_value; }
 public:
     explicit JsonString(string const& value) : Value(value) {}
     explicit JsonString(string &&value)      : Value(move(value)) {}
@@ -211,7 +213,7 @@ public:
 
 class JsonObject final : public Value<Json::OBJECT, Json::object> {
     Json::object const& object_items() const override { return m_value; }
-    Json const& operator[](string const& key) const override;
+    Json const& operator[](string_view key) const override;
 public:
     explicit JsonObject(Json::object const& value) : Value(value) {}
     explicit JsonObject(Json::object &&value)      : Value(move(value)) {}
@@ -271,23 +273,25 @@ Json::Type Json::type()                           const { return m_ptr->type(); 
 double Json::number_value()                       const { return m_ptr->number_value(); }
 int Json::int_value()                             const { return m_ptr->int_value();    }
 bool Json::bool_value()                           const { return m_ptr->bool_value();   }
-string const& Json::string_value()               const { return m_ptr->string_value(); }
+string_view Json::string_value()            const { return m_ptr->string_value(); }
 vector<Json> const& Json::array_items()          const { return m_ptr->array_items();  }
 map<string, Json> const& Json::object_items()    const { return m_ptr->object_items(); }
 Json const& Json::operator[] (size_t i)          const { return (*m_ptr)[i];           }
-Json const& Json::operator[] (string const& key) const { return (*m_ptr)[key];         }
+Json const& Json::operator[] (string_view key) const { return (*m_ptr)[key];         }
 
 double                    JsonValue::number_value()              const { return 0; }
 int                       JsonValue::int_value()                 const { return 0; }
 bool                      JsonValue::bool_value()                const { return false; }
-string const&            JsonValue::string_value()              const { return statics().empty_string; }
+string_view         JsonValue::string_value()              const { return statics().empty_string; }
 vector<Json> const&      JsonValue::array_items()               const { return statics().empty_vector; }
 map<string, Json> const& JsonValue::object_items()              const { return statics().empty_map; }
 Json const&              JsonValue::operator[] (size_t)         const { return static_null(); }
-Json const&              JsonValue::operator[] (string const&) const { return static_null(); }
+Json const&              JsonValue::operator[] (string_view) const { return static_null(); }
 
-Json const& JsonObject::operator[] (string const& key) const {
-    auto iter = m_value.find(key);
+
+//cast string view to string as m_value's find method only takes string
+Json const& JsonObject::operator[] (string_view key) const {
+    auto iter = m_value.find(string(key));
     return (iter == m_value.end()) ? static_null() : iter->second;
 }
 Json const& JsonArray::operator[] (size_t i) const {
@@ -348,7 +352,7 @@ struct JsonParser final {
 
     /* State
      */
-    string const& str;
+    string_view str;
     size_t i;
     string &err;
     bool failed;
@@ -507,10 +511,11 @@ struct JsonParser final {
                 return fail("unexpected end of input in string", "");
 
             ch = str[i++];
-
+            
             if (ch == 'u') {
                 // Extract 4-byte escape sequence
-                string esc = str.substr(i, 4);
+                //cast to string for substr.
+                string esc = string(str).substr(i, 4);
                 // Explicitly check length of the substring. The following loop
                 // relies on std::string returning the terminating NUL when
                 // accessing str[length]. Checking here reduces brittleness.
@@ -591,7 +596,8 @@ struct JsonParser final {
 
         if (str[i] != '.' && str[i] != 'e' && str[i] != 'E'
                 && (i - start_pos) <= static_cast<size_t>(std::numeric_limits<int>::digits10)) {
-            return std::atoi(str.c_str() + start_pos);
+            // obtain the cstring that string_view stored for atoi
+            return std::atoi(str.data() + start_pos);
         }
 
         // Decimal part
@@ -617,8 +623,8 @@ struct JsonParser final {
             while (in_range(str[i], '0', '9'))
                 i++;
         }
-
-        return std::strtod(str.c_str() + start_pos, nullptr);
+        //again, convert to cstring
+        return std::strtod(str.data() + start_pos, nullptr);
     }
 
     /* expect(str, res)
@@ -626,14 +632,17 @@ struct JsonParser final {
      * Expect that 'str' starts at the character that was just read. If it does, advance
      * the input and return res. If not, flag an error.
      */
-    Json expect(string const& expected, Json res) {
+    
+    //again, cast string_view to string where it needs concatenation
+    Json expect(string_view expected, Json res) {
         assert(i != 0);
         i--;
         if (str.compare(i, expected.length(), expected) == 0) {
             i += expected.length();
             return res;
         } else {
-            return fail("parse error: expected " + expected + ", got " + str.substr(i, expected.length()));
+            //again, cast string_view to string where it needs concatenation
+            return fail("parse error: expected " + string(expected) + ", got " + string(str).substr(i, expected.length()));
         }
     }
 
@@ -729,7 +738,8 @@ struct JsonParser final {
 };
 }//namespace {
 
-Json Json::parse(string const& in, string &err, JsonParse strategy) {
+
+Json Json::parse(string_view in, string &err, JsonParse strategy) {
     JsonParser parser { in, 0, err, false, strategy };
     Json result = parser.parse_json(0);
 
@@ -738,13 +748,13 @@ Json Json::parse(string const& in, string &err, JsonParse strategy) {
     if (parser.failed)
         return Json();
     if (parser.i != in.size())
-        return parser.fail("unexpected trailing " + esc(in[parser.i]));
+        return parser.fail("unexpected trailing " + esc(string(in)[parser.i]));
 
     return result;
 }
 
 // Documented in json11.hpp
-vector<Json> Json::parse_multi(string const& in,
+vector<Json> Json::parse_multi(string_view in,
                                std::string::size_type &parser_stop_pos,
                                string &err,
                                JsonParse strategy) {

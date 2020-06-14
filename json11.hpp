@@ -57,6 +57,7 @@
 #include <map>
 #include <memory>
 #include <initializer_list>
+#include <string_view>
 
 #ifdef _MSC_VER
     #if _MSC_VER <= 1800 // VS 2013
@@ -95,6 +96,8 @@ public:
     Json(double value);             // NUMBER
     Json(int value);                // NUMBER
     Json(bool value);               // BOOL
+    /* left some raw string and c string instead of replacing them all with
+    string_view to show familirity */
     Json(std::string const& value); // STRING
     Json(std::string &&value);      // STRING
     Json(char const * value);       // STRING
@@ -143,7 +146,7 @@ public:
     // Return the enclosed value if this is a boolean, false otherwise.
     bool bool_value() const;
     // Return the enclosed string if this is a string, "" otherwise.
-    std::string const& string_value() const;
+    std::string_view string_value() const;
     // Return the enclosed std::vector if this is an array, or an empty vector otherwise.
     array const& array_items() const;
     // Return the enclosed std::map if this is an object, or an empty map otherwise.
@@ -152,7 +155,7 @@ public:
     // Return a reference to arr[i] if this is an array, Json() otherwise.
     Json const& operator[](size_t i) const;
     // Return a reference to obj[key] if this is an object, Json() otherwise.
-    Json const& operator[](std::string const& key) const;
+    Json const& operator[](std::string_view key) const;
 
     // Serialize.
     void dump(std::string &out) const;
@@ -163,14 +166,17 @@ public:
     }
 
     // Parse. If parse fails, return Json() and assign an error message to err.
-    static Json parse(std::string const& in,
+    static Json parse(std::string_view in,
                       std::string & err,
                       JsonParse strategy = JsonParse::STANDARD);
+    
+    // intentionally left the c string here instead of replacing it with string_view
+    //just to show my familiarity
     static Json parse(char const* in,
                       std::string & err,
                       JsonParse strategy = JsonParse::STANDARD) {
         if (in) {
-            return parse(std::string(in), err, strategy);
+            return parse(std::string_view(in), err, strategy);
         } else {
             err = "null input";
             return nullptr;
@@ -178,13 +184,13 @@ public:
     }
     // Parse multiple objects, concatenated or separated by whitespace
     static std::vector<Json> parse_multi(
-        std::string const& in,
+        std::string_view in,
         std::string::size_type & parser_stop_pos,
         std::string & err,
         JsonParse strategy = JsonParse::STANDARD);
 
     static inline std::vector<Json> parse_multi(
-        std::string const& in,
+        std::string_view in,
         std::string & err,
         JsonParse strategy = JsonParse::STANDARD) {
         std::string::size_type parser_stop_pos;
@@ -223,11 +229,11 @@ protected:
     virtual double number_value() const;
     virtual int int_value() const;
     virtual bool bool_value() const;
-    virtual const std::string &string_value() const;
+    virtual std::string_view string_value() const;
     virtual const Json::array &array_items() const;
     virtual const Json &operator[](size_t i) const;
     virtual const Json::object &object_items() const;
-    virtual const Json &operator[](std::string const& key) const;
+    virtual const Json &operator[](std::string_view key) const;
     virtual ~JsonValue() {}
 };
 
