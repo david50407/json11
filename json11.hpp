@@ -59,6 +59,7 @@
 #include <initializer_list>
 #include <string_view>
 #include <functional>
+#include <iterator>
 
 #ifdef _MSC_VER
     #if _MSC_VER <= 1800 // VS 2013
@@ -122,16 +123,52 @@ public:
     Json(T const& t) : Json(t.to_json()) {}
 
     // Implicit constructor: map-like objects (std::map, std::unordered_map, etc)
+    // add SFINAE to check whether M has a valid interator type
+    // bidirectional for std::map, forward for std::unordered map
+    
     template <class M, typename std::enable_if<
-        std::is_constructible<std::string, decltype(std::declval<M>().begin()->first)>::value
-        && std::is_constructible<Json, decltype(std::declval<M>().begin()->second)>::value,
-            int>::type = 0>
+        std::is_constructible<std::string,
+                              decltype(std::declval<M>().begin()->first)
+                             >::value &&
+        std::is_constructible<Json,
+                              decltype(std::declval<M>().begin()->second)
+                             >::value &&
+        (
+         std::is_same<typename std::iterator_traits<
+                        decltype(std::declval<M>().begin())
+                                                   >::iterator_category,
+                     std::bidirectional_iterator_tag // for map
+                    >::value ||
+         std::is_same<typename std::iterator_traits<
+                        decltype(std::declval<M>().begin())
+                                                   >::iterator_category,
+                     std::forward_iterator_tag // for unordered map
+                    >::value
+         ),                                int>::type = 0
+            >
     Json(M const& m) : Json(object(m.begin(), m.end())) {}
 
     // Implicit constructor: vector-like objects (std::list, std::vector, std::set, etc)
+    // add SFINAE to check whether V has a valid iterator type
+    // random access for vector, array, deque,
+    // bidirectional for forward_list, list,
+    // dont feel like implementing queue and stacks here as they dont have iterators...
     template <class V, typename std::enable_if<
-        std::is_constructible<Json, decltype(*std::declval<V>().begin())>::value,
-            int>::type = 0>
+        std::is_constructible<Json, decltype(*std::declval<V>().begin())>::value &&
+        (
+         std::is_same<typename std::iterator_traits<
+                        decltype(std::declval<V>().begin())
+                                                   >::iterator_category,
+                     std::bidirectional_iterator_tag // for map
+                    >::value ||
+         std::is_same<typename std::iterator_traits<
+                        decltype(std::declval<V>().begin())
+                                                   >::iterator_category,
+                     std::random_access_iterator_tag // for unordered map
+                    >::value
+        ),
+                                          int>::type = 0
+             >
     Json(V const& v) : Json(array(v.begin(), v.end())) {}
 
     // This prevents Json(some_pointer) from accidentally producing a bool. Use
@@ -179,7 +216,6 @@ public:
     // Parse. If parse fails, return Json() and assign an error message to err.
     /* since this program does not throw, but return an error message instead,
     there really is no need to use 'expected' */
-    
     static Json parse(std::string_view in,
                       std::string & err,
                       JsonParse strategy = JsonParse::STANDARD);
