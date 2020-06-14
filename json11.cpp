@@ -26,6 +26,7 @@
 #include <cstdio>
 #include <limits>
 #include <string_view>
+#include <functional>
 
 namespace json11 {
 
@@ -38,6 +39,7 @@ using std::make_shared;
 using std::initializer_list;
 using std::move;
 using std::string_view;
+using std::less;
 
 /* Helper for representing null - just a do-nothing struct, plus comparison
  * operators so the helpers in JsonValue work. We can't use nullptr_t because
@@ -233,7 +235,7 @@ struct Statics {
     std::shared_ptr<JsonValue> const f = make_shared<JsonBoolean>(false);
     string const empty_string;
     vector<Json> const empty_vector;
-    map<string, Json> const empty_map;
+    map<string, Json, less<> > const empty_map;
     Statics() {}
 };
 
@@ -275,7 +277,7 @@ int Json::int_value()                             const { return m_ptr->int_valu
 bool Json::bool_value()                           const { return m_ptr->bool_value();   }
 string_view Json::string_value()            const { return m_ptr->string_value(); }
 vector<Json> const& Json::array_items()          const { return m_ptr->array_items();  }
-map<string, Json> const& Json::object_items()    const { return m_ptr->object_items(); }
+map<string, Json, less<> > const& Json::object_items()    const { return m_ptr->object_items(); }
 Json const& Json::operator[] (size_t i)          const { return (*m_ptr)[i];           }
 Json const& Json::operator[] (string_view key) const { return (*m_ptr)[key];         }
 
@@ -284,7 +286,7 @@ int                       JsonValue::int_value()                 const { return 
 bool                      JsonValue::bool_value()                const { return false; }
 string_view         JsonValue::string_value()              const { return statics().empty_string; }
 vector<Json> const&      JsonValue::array_items()               const { return statics().empty_vector; }
-map<string, Json> const& JsonValue::object_items()              const { return statics().empty_map; }
+map<string, Json, less<> > const& JsonValue::object_items()              const { return statics().empty_map; }
 Json const&              JsonValue::operator[] (size_t)         const { return static_null(); }
 Json const&              JsonValue::operator[] (string_view) const { return static_null(); }
 
@@ -677,7 +679,7 @@ struct JsonParser final {
             return parse_string();
 
         if (ch == '{') {
-            map<string, Json> data;
+            map<string, Json, less<> > data;
             ch = get_next_token();
             if (ch == '}')
                 return data;

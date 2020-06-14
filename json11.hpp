@@ -58,6 +58,7 @@
 #include <memory>
 #include <initializer_list>
 #include <string_view>
+#include <functional>
 
 #ifdef _MSC_VER
     #if _MSC_VER <= 1800 // VS 2013
@@ -88,7 +89,7 @@ public:
 
     // Array and object typedefs
     using array = std::vector<Json>;
-    using object = std::map<std::string, Json>;
+    using object = std::map<std::string, Json, std::less<> >;
 
     // Constructors for the various types of JSON value.
     Json() noexcept;                // NUL
