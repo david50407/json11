@@ -252,10 +252,10 @@ public:
      
     bool operator== (Json const& rhs) const;
     bool operator<  (Json const& rhs) const;
-    bool operator!= (Json const& rhs) const { return !(*this == rhs); }
-    bool operator<= (Json const& rhs) const { return !(rhs < *this); }
-    bool operator>  (Json const& rhs) const { return  (rhs < *this); }
-    bool operator>= (Json const& rhs) const { return !(*this < rhs); }
+    bool constexpr operator!= (Json const& rhs) const { return !(*this == rhs); }
+    bool constexpr operator<= (Json const& rhs) const { return !(rhs < *this); }
+    bool constexpr operator>  (Json const& rhs) const { return  (rhs < *this); }
+    bool constexpr operator>= (Json const& rhs) const { return !(*this < rhs); }
 
     /* has_shape(types, err)
      *

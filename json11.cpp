@@ -83,6 +83,9 @@ static void dump(bool value, string &out) {
 /* the program pretty much handles text and judge conditions
  one by one so no need for us to use regex or CTRE here */
 
+// though we added constexpr here, they are still going to be run
+// at run time ( for both dump and parse since arguments
+// are not known until run-time
 static void dump(string_view value, string &out) {
     out += '"';
     for (size_t i = 0; i < value.length(); i++) {
