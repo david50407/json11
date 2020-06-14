@@ -80,6 +80,9 @@ static void dump(bool value, string &out) {
     out += value ? "true" : "false";
 }
 
+/* the program pretty much handles text and judge conditions
+ one by one so no need for us to use regex or CTRE here */
+
 static void dump(string_view value, string &out) {
     out += '"';
     for (size_t i = 0; i < value.length(); i++) {

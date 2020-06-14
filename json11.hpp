@@ -177,6 +177,9 @@ public:
     }
 
     // Parse. If parse fails, return Json() and assign an error message to err.
+    /* since this program does not throw, but return an error message instead,
+    there really is no need to use 'expected' */
+    
     static Json parse(std::string_view in,
                       std::string & err,
                       JsonParse strategy = JsonParse::STANDARD);
@@ -223,7 +226,7 @@ public:
      * Return true if this is a JSON object and, for each item in types, has a field of
      * the given type. If not, return false and set err to a descriptive message.
      */
-    typedef std::initializer_list<std::pair<std::string, Type>> shape;
+    using shape = std::initializer_list<std::pair<std::string, Type>>;
     bool has_shape(shape const& types, std::string & err) const;
 
 private:
