@@ -27,6 +27,7 @@
 #include <limits>
 #include <string_view>
 #include <functional>
+#include <type_traits>
 
 namespace json11 {
 
@@ -40,6 +41,7 @@ using std::initializer_list;
 using std::move;
 using std::string_view;
 using std::less;
+using std::shared_ptr;
 
 /* Helper for representing null - just a do-nothing struct, plus comparison
  * operators so the helpers in JsonValue work. We can't use nullptr_t because
@@ -229,6 +231,21 @@ public:
 /* * * * * * * * * * * * * * * * * * * *
  * Static globals - static-init-safe
  */
+
+/* a deduction guide,
+e.g. :
+template<class T>
+shared_ptr(T*) -> shared_ptr<T>;
+
+cannot help code like this:
+auto const null = shared_ptr(new JsonNull());
+which is invalid.
+Shared_ptr may be constructed from a raw pointer that is of
+incomplete type.
+ 
+So there is no way here for us to use CTAD
+*/
+
 struct Statics {
     std::shared_ptr<JsonValue> const null = make_shared<JsonNull>();
     std::shared_ptr<JsonValue> const t = make_shared<JsonBoolean>(true);
@@ -367,8 +384,17 @@ struct JsonParser final {
     Json fail(string &&msg) {
         return fail(move(msg), Json());
     }
-
-    template <typename T>
+    
+    //add SFINAE to improve FTAD
+    template <class T,
+            class = typename std::enable_if<
+                std::is_same<T, std::string>::value ||
+                std::is_same<T, bool>::value ||
+                std::is_same<T, Json>::value ||
+                std::is_same<T, char const *>::value ||
+                std::is_same<T, char>::value
+            >::type
+    >
     T fail(string &&msg, T const err_ret) {
         if (!failed)
             err = std::move(msg);
