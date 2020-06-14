@@ -81,6 +81,13 @@ enum JsonParse {
 
 class JsonValue;
 
+//the implementation is in inheritance and template methods
+// I think they would benefit greatly from duck typing and std::visit
+// since the number of classes are known.
+
+// It would not be a good idea to use type eraser since it will be
+// pretty brittle to cram all the behaviours of different constructors
+// into a template.
 class Json final {
 public:
     // Types
