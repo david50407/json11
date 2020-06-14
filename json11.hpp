@@ -88,6 +88,16 @@ public:
     };
 
     // Array and object typedefs
+    /* Use std::vector because
+     1. As implemented in json11.cpp, we do not know the total size of
+     json array at the first place when decoding. Data is read and
+     appended sequentially. So we dont use std::array or Json[]
+     2. As json array must be ordered, we dont use any of the unordered
+     containers
+     3. Theres no FIFO or LIFO or in and out operations, so no stack, queue
+     or deque.
+     4. No need of slicing so we dont use list here. */
+    
     using array = std::vector<Json>;
     using object = std::map<std::string, Json, std::less<> >;
 
@@ -198,6 +208,9 @@ public:
         return parse_multi(in, parser_stop_pos, err, strategy);
     }
 
+    /*here is the reason why we use std::map instead of std::unordered_map.
+     To make sure "Json objects act like values: they can be assigned, copied, moved, compared for equality or order, etc." */
+     
     bool operator== (Json const& rhs) const;
     bool operator<  (Json const& rhs) const;
     bool operator!= (Json const& rhs) const { return !(*this == rhs); }

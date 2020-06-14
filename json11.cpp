@@ -745,6 +745,9 @@ struct JsonParser final {
 
             while (1) {
                 i--;
+                /* here we use push_back instead of emplace_back
+                 since Json is constructed from parse_json instead of
+                 Json's constructor */
                 data.push_back(parse_json(depth + 1));
                 if (failed)
                     return Json();
