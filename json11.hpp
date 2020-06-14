@@ -48,7 +48,9 @@
  * THE SOFTWARE.
  */
 
-#pragma once
+#ifndef JSON11_HPP_
+    #define JSON11_HPP_
+#endif
 
 #include <string>
 #include <vector>
