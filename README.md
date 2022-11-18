@@ -40,3 +40,5 @@ JSON values can have their values queried and inspected:
     std::string str = json[0]["k"].string_value();
 
 For more documentation see json11.hpp.
+
+NOTE: since this fork uses `std::less<>`, C++14 is required
